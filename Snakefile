@@ -1,7 +1,28 @@
 # lua-e4x
 
-# library module dependancies
-LIBS = "lua_error lua_files lua_objects".split()
+try:
+	if not gSTARTED: print( gSTARTED )
+except:
+	MODULE = "lua-e4x"
+	include: "../DMC-Lua-Library/snakemake/Snakefile"
 
-include: "../DMC-Lua-Library/snakemake/Snakefile"
+module_config = {
+	"name": "lua-e4x",
+	"module": {
+		"files": [
+			"lua_e4x.lua"
+		],
+		"requires": [
+			"lua-files"
+		]
+	},
+	"tests": {
+		"files": [
+		],
+		"requires": [
+		]
+	}
+}
+
+register( "lua-e4x", module_config )
 
