@@ -9,6 +9,7 @@ except:
 module_config = {
 	"name": "lua-e4x",
 	"module": {
+		"dir": "dmc_lua",
 		"files": [
 			"lua_e4x.lua"
 		],
@@ -17,10 +18,9 @@ module_config = {
 		]
 	},
 	"tests": {
-		"files": [
-		],
-		"requires": [
-		]
+		"dir": "spec",
+		"files": [],
+		"requires": []
 	}
 }
 
