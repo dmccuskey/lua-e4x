@@ -1,7 +1,7 @@
 --====================================================================--
 -- lua_e4x.lua
 --
--- Documentation: http://docs.davidmccuskey.com/display/docs/lua_e4x.lua
+-- Documentation: https://github.com/dmccuskey/lua-e4x
 --====================================================================--
 
 --[[
