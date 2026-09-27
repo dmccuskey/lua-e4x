@@ -1,34 +1,120 @@
-### Overview ###
+# lua-e4x
 
-`lua_e4x` is an implementation of E4X for sane XML navigation in Lua. The API is modeled closely after the one for Adobe e4x (_see references_).
+Read XML in Lua 5.1 with dot syntax: `xml.book.title` finds every `title` in every `book`.
 
-Requires: lua-error, lua-files, lua-objects, lua-utils (all included)
-
-
-### Usage ###
-
-**Searching via Dot Traversal**
+lua-e4x parses an XML string into a tree you search the way [E4X](https://en.wikipedia.org/wiki/ECMAScript_for_XML) (ECMAScript for XML, as in ActionScript 3) does. Each step of a path searches the results of the step before it, and returns a list:
 
 ```lua
-xml.book  -- searches all children of the XML root for `book` elements.
+local E4X = require 'lua_e4x'
 
-xml.book.title  -- searches all children of each `book` result for `title` child-elements and returns those results, and so on.
+local xml = E4X.parse( [[
+<order>
+	<book ISBN="0942407296"><title>Baking Extravagant Pastries with Kumquats</title></book>
+	<book ISBN="0865436401"><title>Emu Care and Breeding</title></book>
+</order>
+]] )
 
-xml.book[1].author  -- only searches the first `book` element for any `author` child-elements.
+print( xml.book:length() )                  --> 2
+print( xml.book[2].title:toString() )       --> Emu Care and Breeding
+print( xml.book[1]['@ISBN']:toString() )    --> 0942407296
 ```
 
+## Features
 
-### More Info ###
+- `E4X.parse()` turns an XML string into a tree of nodes
+- Dot traversal: `xml.book.author.lastName` searches children, then their children, and so on
+- Attributes with `'@name'`: `xml.book['@ISBN']`
+- Lists and nodes share the common methods: `child()`, `attribute()`, `length()`, `toString()`
+- `toXmlString()` writes a node back out as XML
+- One file, pure Lua, no dependencies; MIT licensed
 
+It reads well-formed, simple XML: elements, attributes, text. It doesn't understand CDATA, comments or DTDs, and element names with `_` or `.` are read wrong; see [Known Issues](docs/api.md#known-issues) before using it on XML you don't control.
 
-**Documentation**
+## Quick Start
 
-http://docs.davidmccuskey.com/
+The following steps will get you up and running in about 5 minutes with Lua 5.1 on macOS or Linux. You will read an XML file and pull out elements, attributes and lists of results.
 
-**Examples**
+Prerequisites: Lua 5.1 (`lua -v` shows `Lua 5.1.x`) and git.
 
-There are a lot of examples found in the test dir. There is also a micro example on the documentation website.
+### 1. Get the Code
 
-**References**
+In an empty folder:
 
-* [Adobe e4x Docs](http://help.adobe.com/en_US/ActionScript/3.0_ProgrammingAS3/WS5b3ccc516d4fbf351e63e3d118a9b90204-7e72.html)
+```sh
+git clone https://github.com/dmccuskey/lua-e4x.git
+```
+
+`lua-e4x/dmc_lua/lua_e4x.lua` is the module. The other files in `dmc_lua/` are used only by the tests.
+
+### 2. Parse Some XML
+
+Create `main.lua` in the same folder:
+
+```lua
+package.path = './lua-e4x/dmc_lua/?.lua;' .. package.path
+local E4X = require 'lua_e4x'
+
+local file = io.open( './lua-e4x/spec/xml/test-01.xml', 'r' )
+local xml = E4X.parse( file:read( '*a' ) )
+file:close()
+
+print( xml:name() )
+print( xml.book:length() )
+print( xml.book.editor.lastName:toString() )
+```
+
+Run it:
+
+```sh
+lua main.lua
+```
+
+```text
+order
+2
+Case
+```
+
+If it shows `module 'lua_e4x' not found`, or `attempt to index local 'file'`, run it from the folder that holds `lua-e4x/`.
+
+`test-01.xml` is an `<order>` with two `<book>` elements; only the second has an `<editor>`. `xml` is the root element, `<order>`. `xml.book` searches its children for `book` elements and returns them as a list; `.editor` then searches every book in that list, and `.lastName` every editor found.
+
+**Going further:** the file's contents are in [the example data](docs/api.md#the-example-data); how lists and nodes work ([Lists and Nodes](docs/api.md#lists-and-nodes)).
+
+### 3. Loop Over Results and Read Attributes
+
+Add this to the end of `main.lua`:
+
+```lua
+for i, book in xml.book:nodes() do
+	print( i, book['@ISBN']:toString(), book.title:toString() )
+end
+
+print( xml.book[2]:toXmlString() )
+```
+
+`lua main.lua` now also shows:
+
+```text
+1	0942407296	Baking Extravagant Pastries with Kumquats
+2	0865436401	Emu Care and Breeding
+<book publisher="Prentice Hall" ISBN="0865436401"><title>Emu Care and Breeding</title><editor><lastName>Case</lastName><firstName>Justin</firstName></editor><pageCount>115</pageCount></book>
+```
+
+`nodes()` loops over a list; `[2]` picks one node from it (lists start at 1). `'@ISBN'` reads an attribute. The attributes in `toXmlString()` may come out in another order.
+
+**Going further:** every method on lists and nodes ([API reference](docs/api.md)); what it can't parse ([Known Issues](docs/api.md#known-issues)).
+
+To update, pull the repository again (`git -C lua-e4x pull`), or replace `dmc_lua/lua_e4x.lua` with the newer one.
+
+## Documentation
+
+- [API reference](docs/api.md): the module, lists and nodes, dot traversal, attributes, every method, known issues
+- [dmc-e4x](https://github.com/dmccuskey/dmc-e4x): the same module for Solar2D (formerly Corona SDK), set up like the other DMC Solar2D libraries
+- [Development](docs/development.md): the tests, and where the code is copied to
+
+Everything else is listed on the [documentation home](docs/README.md).
+
+## License
+
+lua-e4x is released under the [MIT License](LICENSE).
