@@ -28,7 +28,7 @@ print( xml.book[1]['@ISBN']:toString() )    --> 0942407296
 - `toXmlString()` writes a node back out as XML
 - One file, pure Lua, no dependencies; MIT licensed
 
-It reads well-formed, simple XML: elements, attributes, text. It doesn't understand CDATA, comments or DTDs, and element names with `_` or `.` are read wrong; see [Known Issues](docs/api.md#known-issues) before using it on XML you don't control.
+It reads elements, attributes, text and CDATA, and skips comments, processing instructions and the `<!DOCTYPE>`. It doesn't validate, and some E4X behavior differs; see [Known Issues](docs/api.md#known-issues) before using it on XML you don't control.
 
 ## Quick Start
 
@@ -98,10 +98,10 @@ print( xml.book[2]:toXmlString() )
 ```text
 1	0942407296	Baking Extravagant Pastries with Kumquats
 2	0865436401	Emu Care and Breeding
-<book publisher="Prentice Hall" ISBN="0865436401"><title>Emu Care and Breeding</title><editor><lastName>Case</lastName><firstName>Justin</firstName></editor><pageCount>115</pageCount></book>
+<book ISBN="0865436401" publisher="Prentice Hall"><title>Emu Care and Breeding</title><editor><lastName>Case</lastName><firstName>Justin</firstName></editor><pageCount>115</pageCount></book>
 ```
 
-`nodes()` loops over a list; `[2]` picks one node from it (lists start at 1). `'@ISBN'` reads an attribute. The attributes in `toXmlString()` may come out in another order.
+`nodes()` loops over a list; `[2]` picks one node from it (lists start at 1). `'@ISBN'` reads an attribute. `toXmlString()` writes the attributes in the order they're written in the XML.
 
 **Going further:** every method on lists and nodes ([API reference](docs/api.md)); what it can't parse ([Known Issues](docs/api.md#known-issues)).
 

@@ -13,9 +13,7 @@ module_config = {
 		"files": [
 			"lua_e4x.lua"
 		],
-		"requires": [
-			"lua-files"
-		]
+		"requires": []
 	},
 	"tests": {
 		"dir": "spec",

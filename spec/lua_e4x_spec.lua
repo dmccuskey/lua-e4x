@@ -139,7 +139,7 @@ describe( "Module Test: lua_e4x.lua", function()
 			--== Book 2
 
 			assert.is.equal( xml.book[2]:toString(), '<title>Emu Care and Breeding</title><editor><lastName>Case</lastName><firstName>Justin</firstName></editor><pageCount>115</pageCount>' )
-			assert.is.equal( xml.book[2]:toXmlString(), '<book publisher="Prentice Hall" ISBN="0865436401"><title>Emu Care and Breeding</title><editor><lastName>Case</lastName><firstName>Justin</firstName></editor><pageCount>115</pageCount></book>' )
+			assert.is.equal( xml.book[2]:toXmlString(), '<book ISBN="0865436401" publisher="Prentice Hall"><title>Emu Care and Breeding</title><editor><lastName>Case</lastName><firstName>Justin</firstName></editor><pageCount>115</pageCount></book>' )
 
 			assert.is.equal( xml.book[2].title[1]:toString(), 'Emu Care and Breeding' )
 			assert.is.equal( xml.book[2].title[1]:toXmlString(), '<title>Emu Care and Breeding</title>' )
@@ -187,6 +187,74 @@ describe( "Module Test: lua_e4x.lua", function()
 		end)
 
 	end) -- Test: XML Node
+
+
+	describe("Test: parser fixes (0.2.0)", function()
+
+		it( "reads element names with '_' and '.'", function()
+			local xml = E4X.parse( '<r><first_name>Ann</first_name><v.1 a_b="x"/></r>' )
+			assert.is.equal( xml.first_name:toString(), 'Ann' )
+			assert.is.equal( xml:child('v.1')[1]['@a_b']:toString(), 'x' )
+		end)
+
+		it( "searches past text nodes", function()
+			local xml = E4X.parse( '<r><p>Hi <b>there</b></p><t>text</t></r>' )
+			assert.is.equal( xml.p.b:toString(), 'there' )
+			assert.is.equal( xml.p:child('b'):length(), 1 )
+			assert.is.equal( xml.t[1].missing, nil )
+			assert.is.equal( xml.t.missing:length(), 0 )
+		end)
+
+		it( "reads CDATA as text", function()
+			local xml = E4X.parse( '<r><c><![CDATA[a < b & <c>]]></c></r>' )
+			assert.is.equal( xml.c:toString(), 'a < b & <c>' )
+			assert.is.equal( xml.c[1]:toXmlString(), '<c>a &lt; b &amp; &lt;c&gt;</c>' )
+		end)
+
+		it( "keeps the attributes of an empty root element", function()
+			local xml = E4X.parse( '<config debug="1"/>' )
+			assert.is.equal( xml:name(), 'config' )
+			assert.is.equal( xml['@debug']:toString(), '1' )
+		end)
+
+		it( "skips comments, processing instructions and DOCTYPE", function()
+			local xml = E4X.parse( '<?xml version="1.0"?>\n<!DOCTYPE r [ <!ELEMENT r ANY> ]>\n<!-- c --><r><!-- <x/> --><?pi data?><a>1</a></r>' )
+			assert.is.equal( xml.declaration['@version']:toString(), '1.0' )
+			assert.is.equal( xml:children():length(), 1 )
+			assert.is.equal( xml.x, nil )
+			assert.is.equal( xml:toXmlString(), '<r><a>1</a></r>' )
+		end)
+
+		it( "reads attribute values holding '>'", function()
+			local xml = E4X.parse( "<r><a test='x > 1' b = \"2\">t</a></r>" )
+			assert.is.equal( xml.a['@test']:toString(), 'x > 1' )
+			assert.is.equal( xml.a['@b']:toString(), '2' )
+			assert.is.equal( xml.a:toString(), 't' )
+		end)
+
+		it( "decodes and encodes entities", function()
+			local xml = E4X.parse( '<r a="&lt;&amp;&quot;"><t>&#233; &#x20AC; &amp;lt; &unknown;</t><u>a &amp; b</u></r>' )
+			assert.is.equal( xml['@a']:toString(), '<&"' )
+			assert.is.equal( xml.t:toString(), '\195\169 \226\130\172 &lt; &unknown;' )
+			assert.is.equal( xml.u[1]:toXmlString(), '<u>a &amp; b</u>' )
+			assert.is.equal( xml:attribute('a')[1]:toXmlString(), 'a="&lt;&amp;&quot;"' )
+		end)
+
+		it( "reports malformed XML clearly", function()
+			assert.has_error( function() E4X.parse( 'no tags' ) end, "Lua E4X: no root element found" )
+			assert.has_error( function() E4X.parse( '<r><a></r>' ) end, "Lua E4X: incorrect closing label found: </r>, expected </a>" )
+			assert.has_error( function() E4X.parse( '<r><a>' ) end, "Lua E4X: missing end tag </a>" )
+		end)
+
+		it( "sets no globals and has a version", function()
+			assert.is_nil( rawget( _G, 'filter' ) )
+			assert.is_nil( rawget( _G, 'map' ) )
+			assert.is_nil( rawget( _G, 'foldr' ) )
+			assert.is_nil( rawget( _G, 'encodeXmlString' ) )
+			assert.is.equal( E4X.__version, '0.2.0' )
+		end)
+
+	end) -- Test: parser fixes
 
 end) -- lua_e4x.lua
 
