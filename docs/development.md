@@ -9,9 +9,7 @@ Only `dmc_lua/lua_e4x.lua` is written in this repository, and it requires nothin
 | file | owner |
 |---|---|
 | `lua_files.lua` | [lua-files](https://github.com/dmccuskey/lua-files) |
-| `lua_error.lua` | [lua-error](https://github.com/dmccuskey/lua-error) |
 | `lua_utils.lua` | [lua-utils](https://github.com/dmccuskey/lua-utils) |
-| `lua_class.lua` (needed by `lua_error.lua`) | [lua-class](https://github.com/dmccuskey/lua-class) |
 | `json.lua` | [lua-json-shim](https://github.com/dmccuskey/lua-json-shim) |
 
 [DMC-Lua-Library](https://github.com/dmccuskey/DMC-Lua-Library) copies `lua_e4x.lua` into its `dmc_lua/` with its Snakemake build (the `Snakefile` here registers the module), and every DMC Solar2D library copies it from there into `dmc_corona/lib/dmc_lua/`. The `Snakefile` lists no requirements: lua-files is needed only by the tests, which use the copy here.
