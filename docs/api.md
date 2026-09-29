@@ -1,6 +1,6 @@
 # API Reference
 
-Everything in lua-e4x, as of version 0.1.1.
+Everything in lua-e4x, as of version 0.2.0.
 
 | name | what it is |
 |---|---|
@@ -30,8 +30,7 @@ local E4X = require 'lua_e4x'
 | `E4X.XmlNodeClass` | the class of elements, for `isa()` |
 | `E4X.Parser` | the parser object `parse()` uses |
 | `E4X.load()`, `E4X.save()` | not written: they print `LuaE4X.load` or `LuaE4X.save` and return nothing |
-
-The module has no version field; the version is in the source file's `VERSION`.
+| `E4X.__version` | the module's version, `'0.2.0'` |
 
 ### In Solar2D
 
@@ -127,7 +126,9 @@ xml.book[1].author         -- the <author> children of the first book only
 xml.book.editor.lastName   -- the <lastName> of every <editor>: 1 result, "Case"
 ```
 
-A name that is also a method name gives the method, not the element: `xml.name`, `xml.parent`, `xml.length`, `xml.children` (and `xml.book.nodes` on a list). Use `child()` for those: `xml:child( 'name' )`. Names with characters Lua doesn't allow after a dot need brackets: `xml['first-name']`, `xml['dc:title']`.
+A name that is also a method name gives the method, not the element: `xml.name`, `xml.parent`, `xml.length`, `xml.children` (and `xml.book.nodes` on a list). Use `child()` for those: `xml:child( 'name' )`. Names with characters Lua doesn't allow after a dot need brackets: `xml['first-name']`, `xml['dc:title']`, `xml['v1.2']`. `xml.first_name` works as it is.
+
+Text next to child elements (`<p>Hi <b>there</b></p>`) is passed over: `xml.p.b` finds the `<b>`.
 
 ## Attributes
 
@@ -169,13 +170,13 @@ An element: the root that `parse()` returns, and every element a search finds.
 | `node:child( name )` | an XmlList of its children named `name` (empty if none) |
 | `node:children()` | an XmlList of all its children: elements and [text nodes](#attribute-and-text-nodes) |
 | `node:attribute( name )` | an XmlList with the attribute `name` (empty if it isn't there); `'*'` for all |
-| `node:attributes()` | an XmlList of all its attributes, in no set order |
+| `node:attributes()` | an XmlList of all its attributes, in the order they're written |
 | `node:hasOwnProperty( key )` | `true` if it has a child element `key`, or with `'@key'`, an attribute `key` |
 | `node:hasSimpleContent()` | `true` if it has no child elements (only text, or nothing) |
 | `node:hasComplexContent()` | `true` if it has child elements |
 | `node:length()` | always 1 |
-| `node:toString()` | its contents: the text for `<title>Emu Care</title>`, the XML of its children for an element with child elements, `''` for an empty element |
-| `node:toXmlString()` | the element itself as XML, with its attributes (in no set order) and children, without the whitespace between elements |
+| `node:toString()` | its contents: the text for `<title>Emu Care</title>` (entities decoded), the XML of its children for an element with child elements, `''` for an empty element |
+| `node:toXmlString()` | the element itself as XML, with its attributes (in the order they're written) and children, without the whitespace between elements; `&`, `<`, `>` (and `"` in attribute values) are written as entities |
 | `node:isa( class )` | `true` for `E4X.XmlNodeClass` |
 
 ```lua
@@ -199,26 +200,31 @@ An **attribute node** comes from `'@name'` or `attribute()`:
 | method | returns |
 |---|---|
 | `attr:name()` | the attribute's name: `'ISBN'` |
-| `attr:toString()` | its value, as written in the XML (entities aren't decoded) |
-| `attr:toXmlString()` | `ISBN="0942407296"` |
+| `attr:toString()` | its value, with entities decoded |
+| `attr:toXmlString()` | `ISBN="0942407296"`, with entities encoded again |
 
-A **text node** holds the text inside an element. `children()` returns them along with the elements:
+A **text node** holds the text inside an element, or a CDATA section. `children()` returns them along with the elements:
 
 | method | returns |
 |---|---|
 | `text:toString()` | the text, with entities decoded and the whitespace kept |
-| `text:toXmlString()` | the same text (entities aren't encoded again) |
+| `text:toXmlString()` | the same text, with `&`, `<` and `>` encoded again |
+| `text:name()` | `nil` |
+| `text:child( name )`, `text:attribute( name )` | an empty XmlList |
 
-Text nodes have none of the element methods (`name()`, `length()`, ...): calling one is an error.
+Text nodes have none of the other element methods (`length()`, `children()`, ...): calling one is an error.
 
 ## Parsing
 
 `E4X.parse( xml_string )` reads:
 
-- an optional XML declaration, `<?xml version="1.0"?>`. It is kept in the root's `declaration` field, but nothing reads it.
-- elements, including empty ones (`<pageCount/>`), and namespace prefixes, which are part of the name (`xml['dc:title']`; `xmlns` attributes are ordinary attributes);
-- attributes in single or double quotes;
-- text. The entities `&amp;`, `&lt;`, `&gt;`, `&quot;`, `&apos;` and numeric ones like `&#65;` are decoded in text (not in attribute values). A numeric entity becomes one byte, so only those below 128 give the right character in UTF-8; above 255 they are an error. Text that is only whitespace is dropped; other text keeps its whitespace.
+- an optional XML declaration, `<?xml version="1.0"?>`, at the start. It is kept in the root's `declaration` field, and its attributes can be read like an element's: `xml.declaration['@version']:toString()`.
+- elements, including empty ones (`<pageCount/>`). Names may hold letters, digits, `_`, `-`, `.`, `:` and non-ASCII (UTF-8) characters. Namespace prefixes are part of the name (`xml['dc:title']`; `xmlns` attributes are ordinary attributes);
+- attributes in single or double quotes, with spaces around `=` or not; a value may hold `>`;
+- text. The entities `&amp;`, `&lt;`, `&gt;`, `&quot;`, `&apos;` and numeric ones like `&#233;` or `&#x20AC;` (written as UTF-8) are decoded in text and in attribute values; any other entity is kept as written. Text that is only whitespace is dropped; other text keeps its whitespace.
+- CDATA sections, as text nodes, not decoded.
+
+It skips comments, processing instructions (`<?name ...?>`) and the `<!DOCTYPE>`, with an internal subset in `[ ]`.
 
 It raises an error for:
 
@@ -226,26 +232,18 @@ It raises an error for:
 |---|---|
 | `Lua E4X: missing XML data to parse` | the argument isn't a string |
 | `Lua E4X: XML data must have length` | the string is empty |
-| `incorrect closing label found:` | a closing tag doesn't match the open element, e.g. `<a></b>`; also any CDATA section |
-| `malformed XML in XmlParser:parseString` | the document starts with a closing tag |
-| `attempt to perform arithmetic on local 'si'` | the string has no tags at all |
-| `bad argument #1 to 'char'` | a numeric entity above 255 |
+| `Lua E4X: no root element found` | the string has no element |
+| `Lua E4X: incorrect closing label found: </b>, expected </a>` | a closing tag doesn't match the open element, e.g. `<a></b>` |
+| `Lua E4X: missing end tag </a>` | an element is left open at the end |
+| `Lua E4X: malformed attribute in <a>, at character 7: 'b=1/></r>'`, and the like | a tag, end tag or attribute it can't read, or an unclosed comment, CDATA section, processing instruction or DOCTYPE; the message says which, where, and shows what follows |
 
-It checks nothing else: elements left open at the end are accepted, text before the root element becomes part of the root, and anything after the root element is ignored.
+It checks nothing else: text before the root element becomes part of the root, and anything after the root element is ignored.
 
 ## Known Issues
 
-- **Element names with `_` or `.` are cut short**: `<first_name>` is read as an element named `first` (the rest is taken for attributes), so `xml.first_name` finds nothing. Only letters, digits, `-` and `:` are read.
-- **Searching an element that holds text raises an error**, when the text is next to child elements (`<p>Hi <b>there</b></p>`, then `xml.p.b`) or when the name isn't there (`xml.book.title.missing`): `attempt to call method 'name' (a nil value)`. Text nodes have no `name()`. Search only elements whose children are all elements.
-- **CDATA sections raise an error** (`incorrect closing label found:`).
-- **Comments, processing instructions and `<!DOCTYPE>`** aren't recognized: they become text, and tags inside a comment become elements.
-- **An attribute value with `>` in it** ends the tag early, so the element is read wrong.
-- **An empty root element loses its attributes**: `<config debug="1"/>` parses with none. `<config debug="1"></config>` keeps them.
-- **Numeric entities above 127** become a single byte (`&#233;` is not UTF-8 `é`), and above 255 an error.
-- **Entities aren't decoded in attribute values**, and `toXmlString()` doesn't encode them again in text, so it can write XML that isn't valid (`<t>a & b</t>`).
 - **Element names that are method names** (`name`, `parent`, `length`, `children`, `nodes`, `child`, `attribute`, ...) give the method in dot traversal; use `child( 'name' )`.
 - **Element methods on a list return an empty list** instead of an error: `xml.book:children()`, `xml.book:name()`. See [XmlList](#xmllist).
 - **A missing element is `nil` from a node** but an empty list from a list. See [Lists and Nodes](#lists-and-nodes).
-- `node[1]` is `nil` (in E4X it is the node itself); `list:toXmlString()`, `E4X.load()` and `E4X.save()` aren't written; nothing reads the XML declaration.
-- Loading the module sets the globals `filter`, `map`, `foldr` and `encodeXmlString`.
-- The module has no version field.
+- `node[1]` is `nil` (in E4X it is the node itself); `list:toXmlString()`, `E4X.load()` and `E4X.save()` aren't written.
+
+Version 0.2.0 fixed those of 0.1.1: element names with `_` or `.` were cut short; searching an element that held text next to child elements, or a missing name below text, raised an error; CDATA sections raised an error; an empty root element lost its attributes; comments, processing instructions and the DOCTYPE became text; a `>` in an attribute value ended the tag; entities weren't decoded in attribute values or encoded again by `toXmlString()`; numeric entities became a single byte; `parse()` of a string with no tags gave an arithmetic error, and an element left open was accepted; attributes came out in no set order; the declaration's attributes couldn't be read; the module set the globals `filter`, `map`, `foldr` and `encodeXmlString`, and had no version field.

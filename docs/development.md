@@ -14,7 +14,7 @@ Only `dmc_lua/lua_e4x.lua` is written in this repository, and it requires nothin
 | `lua_class.lua` (needed by `lua_error.lua`) | [lua-class](https://github.com/dmccuskey/lua-class) |
 | `json.lua` | [lua-json-shim](https://github.com/dmccuskey/lua-json-shim) |
 
-[DMC-Lua-Library](https://github.com/dmccuskey/DMC-Lua-Library) copies `lua_e4x.lua` into its `dmc_lua/` with its Snakemake build (the `Snakefile` here registers the module), and every DMC Solar2D library copies it from there into `dmc_corona/lib/dmc_lua/`. The `Snakefile` lists lua-files as a requirement, so the build copies lua-files and what it needs too, although `lua_e4x.lua` doesn't use them.
+[DMC-Lua-Library](https://github.com/dmccuskey/DMC-Lua-Library) copies `lua_e4x.lua` into its `dmc_lua/` with its Snakemake build (the `Snakefile` here registers the module), and every DMC Solar2D library copies it from there into `dmc_corona/lib/dmc_lua/`. The `Snakefile` lists no requirements: lua-files is needed only by the tests, which use the copy here.
 
 ## Testing
 
@@ -26,7 +26,7 @@ busted spec
 
 ```text
 ++++++++
-8 successes / 0 failures / 0 errors / 0 pending : 0.005034 seconds
+17 successes / 0 failures / 0 errors / 0 pending : 0.007218 seconds
 ```
 
-They parse `spec/xml/test-01.xml` and check dot traversal, attributes, `toString()` and `toXmlString()`. They don't cover anything in the [Known Issues](api.md#known-issues).
+They parse `spec/xml/test-01.xml` and check dot traversal, attributes, `toString()` and `toXmlString()`, then check each parser fix of version 0.2.0 on small strings: names, mixed content, CDATA, comments and DOCTYPE, entities, errors, globals. They don't cover anything in the [Known Issues](api.md#known-issues).
